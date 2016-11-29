@@ -222,7 +222,8 @@ var _defaultSession = {
 	returningVisitor: false,	// is this the first time you visit
 	displayCount: 0,			// number of times the message has been shown
 	optedout: false,			// has the user opted out
-	added: false				// has been actually added to the homescreen
+	added: false,         // has been actually added to the homescreenv
+	doNotShowAgain: false
 };
 
 ath.removeSession = function (appID) {
@@ -231,7 +232,7 @@ ath.removeSession = function (appID) {
 			throw new Error('localStorage is not defined');
 		}
 
-		localStorage.removeItem(appID || ath.defaults.appID);
+		localStorage.removeItem(apFpID || ath.defaults.appID);
 	} catch (e) {
 		// we are most likely in private mode
 	}
@@ -338,6 +339,10 @@ ath.Class = function (options) {
 	}
 	if ( !isValidLocation ) {
 		this.doLog("Add to homescreen: not displaying callout because not a valid location");
+		return;
+	}
+	if ( this.session.doNotShowAgain ) {
+		this.doLog("Add to homescreen: not displaying callout because user checked do not show again");
 		return;
 	}
 
@@ -527,9 +532,30 @@ ath.Class.prototype = {
 		// create the actual message element
 		this.element = document.createElement('div');
 		this.element.className = 'ath-container ath-' + ath.OS + ' ath-' + ath.OS + (parseInt(ath.OSVersion) || '') + ' ath-' + (ath.isTablet ? 'tablet' : 'phone');
-		this.element.style.cssText = '-webkit-transition-property:-webkit-transform,opacity;-webkit-transition-duration:0s;-webkit-transition-timing-function:ease-out;transition-property:transform,opacity;transition-duration:0s;transition-timing-function:ease-out;';
-		this.element.style.webkitTransform = 'translate3d(0,-' + window.innerHeight + 'px,0)';
-		this.element.style.transform = 'translate3d(0,-' + window.innerHeight + 'px,0)';
+
+		//create do not show again check box
+		this.checkboxElement = document.createElement('div');
+		this.checkbox = document.createElement('INPUT');
+		this.checkbox.type = 'checkbox';
+		this.checkbox.id = "doNotShow";
+
+		this.label = document.createElement('label');
+		this.label.htmlFor = "doNotShow";
+		this.label.appendChild(document.createTextNode('Do not remind me again'));
+		this.checkboxElement.appendChild(this.checkbox);
+		this.checkboxElement.appendChild(this.label);
+
+		//create close button
+		this.closeBtnElement = document.createElement('div');
+		this.closeBtnElement.id = 'closeElement';
+		this.closeBtnElement.className = 'ath-container ath-' + ath.OS + ' ath-' + ath.OS + (parseInt(ath.OSVersion) || '') + ' ath-' + (ath.isTablet ? 'tablet' : 'phone');
+		this.closeBtn = document.createElement('lable');
+		this.closeBtn.appendChild(document.createTextNode('X'));
+		this.closeBtnElement.appendChild(this.closeBtn);
+		//this.closeBtnElement.addEventListener('remove', this, false);
+		//this.closeBtnElement.onClick = this.remove();
+
+
 
 		// add the application icon
 		if ( this.options.icon && this.applicationIcon ) {
@@ -541,6 +567,12 @@ ath.Class.prototype = {
 
 			this.img.src = this.applicationIcon.href;
 			this.element.appendChild(this.img);
+			this.element.appendChild(this.checkboxElement);
+			//this.element.appendChild(this.closeBtnElement);
+			//this.element.appendChild(this.checkbox);
+			//this.element.appendChild(this.label);
+
+
 		}
 
 		this.element.innerHTML += message;
@@ -550,6 +582,7 @@ ath.Class.prototype = {
 
 		// attach all elements to the DOM
 		this.viewport.appendChild(this.element);
+		this.viewport.appendChild(this.closeBtnElement);
 		this.container.appendChild(this.viewport);
 
 		// if we don't have to wait for an image to load, show the message right away
@@ -583,9 +616,12 @@ ath.Class.prototype = {
 		// Enable closing after 1 second
 		if ( !this.options.mandatory ) {
 			setTimeout(function () {
-				that.element.addEventListener('click', that, true);
+				that.closeBtnElement.addEventListener('click', that, false);
+			//	document.getElementById("closeElement").addEventListener('click', that.remove, true);
 			}, 1000);
+
 		}
+
 
 		// kick the animation
 		setTimeout(function () {
@@ -607,6 +643,10 @@ ath.Class.prototype = {
 	},
 
 	remove: function () {
+		if(document.getElementById("doNotShow").checked){
+			this.session.doNotShowAgain = true;
+			this.updateSession();
+		}
 		clearTimeout(this.removeTimer);
 
 		// clear up the event listeners
@@ -615,11 +655,12 @@ ath.Class.prototype = {
 			this.img.removeEventListener('error', this, false);
 		}
 
+
 		window.removeEventListener('resize', this, false);
 		window.removeEventListener('scroll', this, false);
 		window.removeEventListener('orientationchange', this, false);
 		document.removeEventListener('touchmove', this, true);
-		this.element.removeEventListener('click', this, true);
+		//this.closeBtnElement.removeEventListener('click', this, false);
 
 		// remove the message element on transition end
 		this.element.addEventListener('transitionend', this, false);
@@ -748,3 +789,4 @@ function _removeToken () {
 window.addToHomescreen = ath;
 
 })(window, document);
+

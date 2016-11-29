@@ -7,7 +7,7 @@
   ],
   "description": "Add to homescreen call out for iOS and Android",
   "main": [
-    "src/addtohomescreen.min.js",
+    "src/addtohomescreen.js",
     "style/addtohomescreen.css"
   ],
   "ignore": [
